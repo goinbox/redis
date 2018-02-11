@@ -11,26 +11,26 @@ type PConfig struct {
 }
 
 type Pool struct {
-	p *pool.Pool
+	pl *pool.Pool
 
 	config *PConfig
 }
 
 func NewPool(config *PConfig) *Pool {
-	this := &Pool{
+	p := &Pool{
 		config: config,
 	}
 
-	config.NewConnFunc = this.newConn
+	config.NewConnFunc = p.newConn
 	config.KeepAliveFunc = keepAlive
 
-	this.p = pool.NewPool(&this.config.Config)
+	p.pl = pool.NewPool(&p.config.Config)
 
-	return this
+	return p
 }
 
-func (this *Pool) Get() (*Client, error) {
-	conn, err := this.p.Get()
+func (p *Pool) Get() (*Client, error) {
+	conn, err := p.pl.Get()
 	if err != nil {
 		return nil, err
 	}
@@ -38,12 +38,12 @@ func (this *Pool) Get() (*Client, error) {
 	return conn.(*Client), nil
 }
 
-func (this *Pool) Put(client *Client) error {
-	return this.p.Put(client)
+func (p *Pool) Put(client *Client) error {
+	return p.pl.Put(client)
 }
 
-func (this *Pool) newConn() (pool.IConn, error) {
-	return this.config.NewClientFunc()
+func (p *Pool) newConn() (pool.IConn, error) {
+	return p.config.NewClientFunc()
 }
 
 func keepAlive(conn pool.IConn) error {

@@ -36,101 +36,101 @@ func NewClient(config *Config, logger golog.ILogger) *Client {
 		logger = new(golog.NoopLogger)
 	}
 
-	this := &Client{
+	c := &Client{
 		config: config,
 		logger: logger,
 
 		pipeCmds: []*cmdArgs{},
 	}
-	this.clff = this.cmdLogFmt
+	c.clff = c.cmdLogFmt
 
-	return this
+	return c
 }
 
-func (this *Client) SetLogger(logger golog.ILogger) *Client {
-	this.logger = logger
+func (c *Client) SetLogger(logger golog.ILogger) *Client {
+	c.logger = logger
 
-	return this
+	return c
 }
 
-func (this *Client) SetCmdLogFmtFunc(clff CmdLogFmtFunc) *Client {
-	this.clff = clff
+func (c *Client) SetCmdLogFmtFunc(clff CmdLogFmtFunc) *Client {
+	c.clff = clff
 
-	return this
+	return c
 }
 
-func (this *Client) Connected() bool {
-	return this.connected
+func (c *Client) Connected() bool {
+	return c.connected
 }
 
-func (this *Client) Free() {
-	if this.conn != nil {
-		this.conn.Close()
+func (c *Client) Free() {
+	if c.conn != nil {
+		c.conn.Close()
 	}
 
-	this.connected = false
+	c.connected = false
 }
 
-func (this *Client) Connect() error {
+func (c *Client) Connect() error {
 	options := []redis.DialOption{
-		redis.DialConnectTimeout(this.config.ConnectTimeout),
-		redis.DialReadTimeout(this.config.ReadTimeout),
-		redis.DialWriteTimeout(this.config.WriteTimeout),
+		redis.DialConnectTimeout(c.config.ConnectTimeout),
+		redis.DialReadTimeout(c.config.ReadTimeout),
+		redis.DialWriteTimeout(c.config.WriteTimeout),
 	}
 
-	conn, err := redis.Dial("tcp", this.config.Host+":"+this.config.Port, options...)
+	conn, err := redis.Dial("tcp", c.config.Host+":"+c.config.Port, options...)
 	if err != nil {
 		return err
 	}
 
-	_, err = conn.Do("auth", this.config.Pass)
+	_, err = conn.Do("auth", c.config.Pass)
 	if err != nil {
 		return err
 	}
 
-	this.conn = conn
-	this.connected = true
+	c.conn = conn
+	c.connected = true
 
 	return nil
 }
 
-func (this *Client) Do(cmd string, args ...interface{}) *Reply {
-	if !this.connected {
-		if err := this.Connect(); err != nil {
+func (c *Client) Do(cmd string, args ...interface{}) *Reply {
+	if !c.connected {
+		if err := c.Connect(); err != nil {
 			return NewReply(nil, err)
 		}
 	}
 
-	this.log(cmd, args...)
+	c.log(cmd, args...)
 	defer func() {
-		this.pipeCmds = []*cmdArgs{}
+		c.pipeCmds = []*cmdArgs{}
 	}()
 
-	for _, ca := range this.pipeCmds {
-		if err := this.conn.Send(ca.cmd, ca.args...); err != nil {
+	for _, ca := range c.pipeCmds {
+		if err := c.conn.Send(ca.cmd, ca.args...); err != nil {
 			return NewReply(nil, err)
 		}
 	}
 
-	reply, err := this.conn.Do(cmd, args...)
+	reply, err := c.conn.Do(cmd, args...)
 	if err != nil {
 		if err != io.EOF {
 			return NewReply(nil, err)
 		}
-		if !this.config.TimeoutAutoReconnect {
+		if !c.config.TimeoutAutoReconnect {
 			return NewReply(nil, err)
 		}
-		err = this.reconnect()
+		err = c.reconnect()
 		if err != nil {
 			return NewReply(nil, err)
 		}
 
-		for _, ca := range this.pipeCmds {
-			if err = this.conn.Send(ca.cmd, ca.args...); err != nil {
+		for _, ca := range c.pipeCmds {
+			if err = c.conn.Send(ca.cmd, ca.args...); err != nil {
 				return NewReply(nil, err)
 			}
 		}
-		reply, err = this.conn.Do(cmd, args...)
+		reply, err = c.conn.Do(cmd, args...)
 		if err != nil {
 			return NewReply(nil, err)
 		}
@@ -139,65 +139,65 @@ func (this *Client) Do(cmd string, args ...interface{}) *Reply {
 	return NewReply(reply, err)
 }
 
-func (this *Client) Send(cmd string, args ...interface{}) {
-	this.log(cmd, args...)
-	this.pipeCmds = append(this.pipeCmds, &cmdArgs{cmd, args})
+func (c *Client) Send(cmd string, args ...interface{}) {
+	c.log(cmd, args...)
+	c.pipeCmds = append(c.pipeCmds, &cmdArgs{cmd, args})
 }
 
-func (this *Client) ExecPipelining() ([]*Reply, []int) {
-	if !this.connected {
-		if err := this.Connect(); err != nil {
+func (c *Client) ExecPipelining() ([]*Reply, []int) {
+	if !c.connected {
+		if err := c.Connect(); err != nil {
 			return []*Reply{NewReply(nil, err)}, []int{0}
 		}
 	}
 
 	defer func() {
-		this.pipeCmds = []*cmdArgs{}
+		c.pipeCmds = []*cmdArgs{}
 	}()
 
-	for _, ca := range this.pipeCmds {
-		if err := this.conn.Send(ca.cmd, ca.args...); err != nil {
+	for _, ca := range c.pipeCmds {
+		if err := c.conn.Send(ca.cmd, ca.args...); err != nil {
 			return []*Reply{NewReply(nil, err)}, []int{0}
 		}
 	}
-	if err := this.conn.Flush(); err != nil {
+	if err := c.conn.Flush(); err != nil {
 		return []*Reply{NewReply(nil, err)}, []int{0}
 	}
 
-	reply, err := this.conn.Receive()
+	reply, err := c.conn.Receive()
 	if err != nil {
 		if err != io.EOF {
 			return []*Reply{NewReply(nil, err)}, []int{0}
 		}
-		if !this.config.TimeoutAutoReconnect {
+		if !c.config.TimeoutAutoReconnect {
 			return []*Reply{NewReply(nil, err)}, []int{0}
 		}
-		err = this.reconnect()
+		err = c.reconnect()
 		if err != nil {
 			return []*Reply{NewReply(nil, err)}, []int{0}
 		}
 
-		for _, ca := range this.pipeCmds {
-			if err = this.conn.Send(ca.cmd, ca.args...); err != nil {
+		for _, ca := range c.pipeCmds {
+			if err = c.conn.Send(ca.cmd, ca.args...); err != nil {
 				return []*Reply{NewReply(nil, err)}, []int{0}
 			}
 		}
 
-		if err = this.conn.Flush(); err != nil {
+		if err = c.conn.Flush(); err != nil {
 			return []*Reply{NewReply(nil, err)}, []int{0}
 		}
-		reply, err = this.conn.Receive()
+		reply, err = c.conn.Receive()
 		if err != nil {
 			return []*Reply{NewReply(nil, err)}, []int{0}
 		}
 	}
 
-	replies := make([]*Reply, len(this.pipeCmds))
+	replies := make([]*Reply, len(c.pipeCmds))
 	var errIndexes []int
 
 	replies[0] = NewReply(reply, nil)
-	for i := 1; i < len(this.pipeCmds); i++ {
-		reply, err := this.conn.Receive()
+	for i := 1; i < len(c.pipeCmds); i++ {
+		reply, err := c.conn.Receive()
 		replies[i] = NewReply(reply, err)
 		if err != nil {
 			errIndexes = append(errIndexes, i)
@@ -207,16 +207,16 @@ func (this *Client) ExecPipelining() ([]*Reply, []int) {
 	return replies, errIndexes
 }
 
-func (this *Client) BeginTrans() {
-	this.Send("multi")
+func (c *Client) BeginTrans() {
+	c.Send("multi")
 }
 
-func (this *Client) DiscardTrans() error {
-	return this.Do("discard").Err
+func (c *Client) DiscardTrans() error {
+	return c.Do("discard").Err
 }
 
-func (this *Client) ExecTrans() ([]*Reply, error) {
-	reply := this.Do("exec")
+func (c *Client) ExecTrans() ([]*Reply, error) {
+	reply := c.Do("exec")
 	values, err := redis.Values(reply.reply, reply.Err)
 	if err != nil {
 		return nil, err
@@ -230,18 +230,18 @@ func (this *Client) ExecTrans() ([]*Reply, error) {
 	return replies, nil
 }
 
-func (this *Client) log(cmd string, args ...interface{}) {
+func (c *Client) log(cmd string, args ...interface{}) {
 	if len(cmd) == 0 {
 		return
 	}
 
-	msg := this.clff(cmd, args...)
+	msg := c.clff(cmd, args...)
 	if msg != nil {
-		this.logger.Log(this.config.LogLevel, msg)
+		c.logger.Log(c.config.LogLevel, msg)
 	}
 }
 
-func (this *Client) cmdLogFmt(cmd string, args ...interface{}) []byte {
+func (c *Client) cmdLogFmt(cmd string, args ...interface{}) []byte {
 	for _, arg := range args {
 		cmd += " " + fmt.Sprint(arg)
 	}
@@ -249,8 +249,8 @@ func (this *Client) cmdLogFmt(cmd string, args ...interface{}) []byte {
 	return []byte(cmd)
 }
 
-func (this *Client) reconnect() error {
-	this.Free()
+func (c *Client) reconnect() error {
+	c.Free()
 
-	return this.Connect()
+	return c.Connect()
 }

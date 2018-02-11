@@ -16,16 +16,16 @@ func NewReply(reply interface{}, err error) *Reply {
 	}
 }
 
-func (this *Reply) SimpleReplyIsNil() bool {
-	if this.reply == nil {
+func (r *Reply) SimpleReplyIsNil() bool {
+	if r.reply == nil {
 		return true
 	}
 
 	return false
 }
 
-func (this *Reply) ArrReplyIsNil() bool {
-	v, _ := redis.Values(this.reply, nil)
+func (r *Reply) ArrReplyIsNil() bool {
+	v, _ := redis.Values(r.reply, nil)
 	if len(v) == 0 {
 		return true
 	}
@@ -33,54 +33,54 @@ func (this *Reply) ArrReplyIsNil() bool {
 	return false
 }
 
-func (this *Reply) Bool() (bool, error) {
-	return redis.Bool(this.reply, nil)
+func (r *Reply) Bool() (bool, error) {
+	return redis.Bool(r.reply, nil)
 }
 
-func (this *Reply) ByteSlices() ([][]byte, error) {
-	return redis.ByteSlices(this.reply, nil)
+func (r *Reply) ByteSlices() ([][]byte, error) {
+	return redis.ByteSlices(r.reply, nil)
 }
 
-func (this *Reply) Bytes() ([]byte, error) {
-	return redis.Bytes(this.reply, nil)
+func (r *Reply) Bytes() ([]byte, error) {
+	return redis.Bytes(r.reply, nil)
 }
 
-func (this *Reply) Float64() (float64, error) {
-	return redis.Float64(this.reply, nil)
+func (r *Reply) Float64() (float64, error) {
+	return redis.Float64(r.reply, nil)
 }
 
-func (this *Reply) Int() (int, error) {
-	return redis.Int(this.reply, nil)
+func (r *Reply) Int() (int, error) {
+	return redis.Int(r.reply, nil)
 }
 
-func (this *Reply) Int64() (int64, error) {
-	return redis.Int64(this.reply, nil)
+func (r *Reply) Int64() (int64, error) {
+	return redis.Int64(r.reply, nil)
 }
 
-func (this *Reply) Int64Map() (map[string]int64, error) {
-	return redis.Int64Map(this.reply, nil)
+func (r *Reply) Int64Map() (map[string]int64, error) {
+	return redis.Int64Map(r.reply, nil)
 }
 
-func (this *Reply) Ints() ([]int, error) {
-	return redis.Ints(this.reply, nil)
+func (r *Reply) Ints() ([]int, error) {
+	return redis.Ints(r.reply, nil)
 }
 
-func (this *Reply) Struct(s interface{}) error {
-	return redis.ScanStruct(this.reply.([]interface{}), s)
+func (r *Reply) Struct(s interface{}) error {
+	return redis.ScanStruct(r.reply.([]interface{}), s)
 }
 
-func (this *Reply) String() (string, error) {
-	return redis.String(this.reply, nil)
+func (r *Reply) String() (string, error) {
+	return redis.String(r.reply, nil)
 }
 
-func (this *Reply) StringMap() (map[string]string, error) {
-	return redis.StringMap(this.reply, nil)
+func (r *Reply) StringMap() (map[string]string, error) {
+	return redis.StringMap(r.reply, nil)
 }
 
-func (this *Reply) Strings() ([]string, error) {
-	return redis.Strings(this.reply, nil)
+func (r *Reply) Strings() ([]string, error) {
+	return redis.Strings(r.reply, nil)
 }
 
-func (this *Reply) Uint64() (uint64, error) {
-	return redis.Uint64(this.reply, nil)
+func (r *Reply) Uint64() (uint64, error) {
+	return redis.Uint64(r.reply, nil)
 }
