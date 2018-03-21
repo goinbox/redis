@@ -65,6 +65,10 @@ func (r *Reply) Ints() ([]int, error) {
 	return redis.Ints(r.reply, nil)
 }
 
+func (r *Reply) Int64s() ([]int64, error) {
+	return redis.Int64s(r.reply, nil)
+}
+
 func (r *Reply) Struct(s interface{}) error {
 	return redis.ScanStruct(r.reply.([]interface{}), s)
 }
