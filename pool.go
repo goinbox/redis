@@ -49,5 +49,5 @@ func (p *Pool) newConn() (pool.IConn, error) {
 func keepAlive(conn pool.IConn) error {
 	client := conn.(*Client)
 
-	return client.Do("ping").Err
+	return client.DoWithoutLog("ping").Err
 }
