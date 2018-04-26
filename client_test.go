@@ -87,8 +87,7 @@ func TestAutoReconnect(t *testing.T) {
 func getTestClient() *Client {
 	w, _ := golog.NewFileWriter("/tmp/test_redis.log")
 	logger, _ := golog.NewSimpleLogger(w, golog.LEVEL_INFO, golog.NewSimpleFormater())
-	//     config := NewConfig("127.0.0.1", "6379", "123")
-	config := NewConfig("10.16.59.187", "6379", "123")
+	config := NewConfig("127.0.0.1", "6379", "123")
 
 	return NewClient(config, logger)
 }
