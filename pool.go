@@ -9,7 +9,7 @@ type PConfig struct {
 
 	NewClientFunc func() (*Client, error)
 
-	PrintKeepAliveLog bool
+	LogKeepAlive bool
 }
 
 type Pool struct {
@@ -51,7 +51,7 @@ func (p *Pool) newConn() (pool.IConn, error) {
 func (p *Pool) keepAlive(conn pool.IConn) error {
 	client := conn.(*Client)
 
-	if p.config.PrintKeepAliveLog == true {
+	if p.config.LogKeepAlive == true {
 		return client.Do("ping").Err
 	}
 
