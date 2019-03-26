@@ -42,6 +42,11 @@ func TestClient(t *testing.T) {
 		t.Log(reply.Err)
 	}
 
+	time.Sleep(time.Second* 5)
+	reply = client.Do("get", "c")
+	t.Log(reply.Int())
+
+
 	client.Free()
 }
 
@@ -85,8 +90,11 @@ func TestAutoReconnect(t *testing.T) {
 }
 
 func getTestClient() *Client {
-	logger, _ := golog.NewSimpleLogger(golog.NewStdoutWriter(), golog.LEVEL_DEBUG, golog.NewConsoleFormater())
+	logger := golog.NewSimpleLogger(golog.NewConsoleWriter(),
+		golog.NewConsoleFormater(golog.NewSimpleFormater())).
+		SetLogLevel(golog.LEVEL_DEBUG)
 	config := NewConfig("127.0.0.1", "6379", "123")
+	config.ConnectTimeout = time.Second * 3
 
 	return NewClient(config, logger)
 }
