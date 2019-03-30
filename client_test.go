@@ -42,10 +42,9 @@ func TestClient(t *testing.T) {
 		t.Log(reply.Err)
 	}
 
-	time.Sleep(time.Second* 5)
+	time.Sleep(time.Second * 5)
 	reply = client.Do("get", "c")
 	t.Log(reply.Int())
-
 
 	client.Free()
 }
