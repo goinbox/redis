@@ -32,7 +32,7 @@ type Client struct {
 
 func NewClient(config *Config, logger golog.ILogger) *Client {
 	if config.LogLevel == 0 {
-		config.LogLevel = golog.LEVEL_INFO
+		config.LogLevel = golog.LevelInfo
 	}
 
 	if logger == nil {

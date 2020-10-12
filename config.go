@@ -28,7 +28,7 @@ type Config struct {
 
 func NewConfig(host, port, pass string) *Config {
 	return &Config{
-		LogLevel: golog.LEVEL_INFO,
+		LogLevel: golog.LevelInfo,
 
 		Host: host,
 		Port: port,

@@ -91,7 +91,7 @@ func TestAutoReconnect(t *testing.T) {
 func getTestClient() *Client {
 	logger := golog.NewSimpleLogger(golog.NewConsoleWriter(),
 		golog.NewConsoleFormater(golog.NewSimpleFormater())).
-		SetLogLevel(golog.LEVEL_DEBUG)
+		SetLogLevel(golog.LevelDebug)
 	config := NewConfig("127.0.0.1", "6379", "123")
 	config.ConnectTimeout = time.Second * 3
 
