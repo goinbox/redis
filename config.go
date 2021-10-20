@@ -1,22 +1,21 @@
 package redis
 
 import (
-	"github.com/goinbox/golog"
-
+	"fmt"
 	"time"
 )
 
 const (
-	DEFAULT_CONNECT_TIMEOUT = 10 * time.Second
-	DEFAULT_READ_TIMEOUT    = 10 * time.Second
-	DEFAULT_WRITE_TIMEOUT   = 10 * time.Second
+	DefaultConnectTimeout = 10 * time.Second
+	DefaultReadTimeout    = 10 * time.Second
+	DefaultWriteTimeout   = 10 * time.Second
+
+	DefaultLogFieldKeyAddr = "redis"
+	DefaultLogFieldKeyCmd  = "cmd"
 )
 
 type Config struct {
-	LogLevel int
-
-	Host string
-	Port string
+	Addr string
 	Pass string
 
 	ConnectTimeout time.Duration
@@ -24,20 +23,23 @@ type Config struct {
 	WriteTimeout   time.Duration
 
 	TimeoutAutoReconnect bool
+
+	LogFieldKeyAddr string
+	LogFieldKeyCmd  string
 }
 
-func NewConfig(host, port, pass string) *Config {
+func NewConfig(host, pass string, port int) *Config {
 	return &Config{
-		LogLevel: golog.LevelInfo,
-
-		Host: host,
-		Port: port,
+		Addr: fmt.Sprintf("%s:%d", host, port),
 		Pass: pass,
 
-		ConnectTimeout: DEFAULT_CONNECT_TIMEOUT,
-		ReadTimeout:    DEFAULT_READ_TIMEOUT,
-		WriteTimeout:   DEFAULT_WRITE_TIMEOUT,
+		ConnectTimeout: DefaultConnectTimeout,
+		ReadTimeout:    DefaultReadTimeout,
+		WriteTimeout:   DefaultWriteTimeout,
 
 		TimeoutAutoReconnect: true,
+
+		LogFieldKeyAddr: DefaultLogFieldKeyAddr,
+		LogFieldKeyCmd:  DefaultLogFieldKeyCmd,
 	}
 }

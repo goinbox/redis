@@ -24,14 +24,14 @@ func newRedisTestClient() (*Client, error) {
 }
 
 func testPool(pool *Pool, t *testing.T) {
-	client, _ := pool.Get()
+	client, _ := pool.Get(nil)
 	client.Do("set", "redis_pool", "pool_test")
 	reply := client.Do("get", "redis_pool")
 	t.Log(reply.String())
 	pool.Put(client)
 
 	time.Sleep(time.Second * 4)
-	client, _ = pool.Get()
+	client, _ = pool.Get(nil)
 	reply = client.Do("get", "redis_pool")
 	t.Log(reply.String())
 	pool.Put(client)

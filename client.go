@@ -1,16 +1,13 @@
 package redis
 
 import (
+	"fmt"
+	"io"
+
 	"github.com/garyburd/redigo/redis"
 
 	"github.com/goinbox/golog"
-	"github.com/goinbox/gomisc"
-
-	"fmt"
-	"io"
 )
-
-type CmdLogFmtFunc func(cmd string, args ...interface{}) []byte
 
 type cmdArgs struct {
 	cmd  string
@@ -18,11 +15,8 @@ type cmdArgs struct {
 }
 
 type Client struct {
-	config    *Config
-	logger    golog.ILogger
-	traceId   []byte
-	clff      CmdLogFmtFunc
-	logPrefix []byte
+	config *Config
+	logger golog.Logger
 
 	conn      redis.Conn
 	connected bool
@@ -30,47 +24,29 @@ type Client struct {
 	pipeCmds []*cmdArgs
 }
 
-func NewClient(config *Config, logger golog.ILogger) *Client {
-	if config.LogLevel == 0 {
-		config.LogLevel = golog.LevelInfo
-	}
-
+func NewClient(config *Config, logger golog.Logger) *Client {
 	if logger == nil {
 		logger = new(golog.NoopLogger)
 	}
 
 	c := &Client{
-		config:  config,
-		logger:  logger,
-		traceId: []byte("-"),
+		config: config,
+		logger: logger.With(&golog.Field{
+			Key:   config.LogFieldKeyAddr,
+			Value: config.Addr,
+		}),
 
 		pipeCmds: []*cmdArgs{},
 	}
-	c.clff = c.cmdLogFmt
-	c.logPrefix = []byte("[RedisClient " +
-		config.Host + ":" + config.Port +
-		"]\t")
 
 	return c
 }
 
-func (c *Client) SetLogger(logger golog.ILogger) *Client {
+func (c *Client) SetLogger(logger golog.Logger) *Client {
 	if logger == nil {
 		logger = new(golog.NoopLogger)
 	}
 	c.logger = logger
-
-	return c
-}
-
-func (c *Client) SetTraceId(traceId []byte) *Client {
-	c.traceId = traceId
-
-	return c
-}
-
-func (c *Client) SetCmdLogFmtFunc(clff CmdLogFmtFunc) *Client {
-	c.clff = clff
 
 	return c
 }
@@ -81,7 +57,7 @@ func (c *Client) Connected() bool {
 
 func (c *Client) Free() {
 	if c.conn != nil {
-		c.conn.Close()
+		_ = c.conn.Close()
 	}
 
 	c.connected = false
@@ -94,7 +70,7 @@ func (c *Client) Connect() error {
 		redis.DialWriteTimeout(c.config.WriteTimeout),
 	}
 
-	conn, err := redis.Dial("tcp", c.config.Host+":"+c.config.Port, options...)
+	conn, err := redis.Dial("tcp", c.config.Addr, options...)
 	if err != nil {
 		return err
 	}
@@ -266,18 +242,14 @@ func (c *Client) log(cmd string, args ...interface{}) {
 		return
 	}
 
-	msg := c.clff(cmd, args...)
-	if msg != nil {
-		_ = c.logger.Log(c.config.LogLevel, gomisc.AppendBytes(c.traceId, []byte("\t"), c.logPrefix, msg))
-	}
-}
-
-func (c *Client) cmdLogFmt(cmd string, args ...interface{}) []byte {
 	for _, arg := range args {
 		cmd += " " + fmt.Sprint(arg)
 	}
 
-	return []byte(cmd)
+	c.logger.Info("run cmd", &golog.Field{
+		Key:   c.config.LogFieldKeyCmd,
+		Value: cmd,
+	})
 }
 
 func (c *Client) reconnect() error {

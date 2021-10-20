@@ -1,6 +1,7 @@
 package redis
 
 import (
+	"github.com/goinbox/golog"
 	"github.com/goinbox/pool"
 )
 
@@ -35,13 +36,18 @@ func NewPool(config *PConfig) *Pool {
 	return p
 }
 
-func (p *Pool) Get() (*Client, error) {
+func (p *Pool) Get(logger golog.Logger) (*Client, error) {
 	conn, err := p.pl.Get()
 	if err != nil {
 		return nil, err
 	}
 
-	return conn.(*Client), nil
+	client := conn.(*Client)
+	if logger != nil {
+		client.SetLogger(logger)
+	}
+
+	return client, nil
 }
 
 func (p *Pool) Put(client *Client) error {
