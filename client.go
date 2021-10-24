@@ -75,9 +75,11 @@ func (c *Client) Connect() error {
 		return err
 	}
 
-	_, err = conn.Do("auth", c.config.Pass)
-	if err != nil {
-		return err
+	if c.config.Pass != "" {
+		_, err = conn.Do("auth", c.config.Pass)
+		if err != nil {
+			return err
+		}
 	}
 
 	c.conn = conn
