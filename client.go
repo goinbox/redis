@@ -42,7 +42,12 @@ func NewClient(config *Config, logger golog.Logger) *Client {
 }
 
 func (c *Client) SetLogger(logger golog.Logger) *Client {
-	c.logger = logger
+	if logger != nil {
+		c.logger = logger.With(&golog.Field{
+			Key:   c.config.LogFieldKeyAddr,
+			Value: c.config.Addr,
+		})
+	}
 
 	return c
 }
