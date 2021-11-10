@@ -15,11 +15,6 @@ func TestClient(t *testing.T) {
 	reply = client.Do("get", "c")
 	t.Log(reply.Int())
 
-	reply = client.DoWithoutLog("set", "d", "1")
-	t.Log(reply.String())
-	reply = client.DoWithoutLog("get", "d")
-	t.Log(reply.Int())
-
 	client.Send("set", "a", "a")
 	client.Send("set", "b", "b")
 	client.Send("get", "a")

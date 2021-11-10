@@ -25,27 +25,23 @@ type Client struct {
 }
 
 func NewClient(config *Config, logger golog.Logger) *Client {
-	if logger == nil {
-		logger = new(golog.NoopLogger)
-	}
-
 	c := &Client{
 		config: config,
-		logger: logger.With(&golog.Field{
-			Key:   config.LogFieldKeyAddr,
-			Value: config.Addr,
-		}),
 
 		pipeCmds: []*cmdArgs{},
+	}
+
+	if logger != nil {
+		c.logger = logger.With(&golog.Field{
+			Key:   config.LogFieldKeyAddr,
+			Value: config.Addr,
+		})
 	}
 
 	return c
 }
 
 func (c *Client) SetLogger(logger golog.Logger) *Client {
-	if logger == nil {
-		logger = new(golog.NoopLogger)
-	}
 	c.logger = logger
 
 	return c
@@ -94,16 +90,6 @@ func (c *Client) Do(cmd string, args ...interface{}) *Reply {
 	}
 
 	c.log(cmd, args...)
-
-	return c.do(cmd, args...)
-}
-
-func (c *Client) DoWithoutLog(cmd string, args ...interface{}) *Reply {
-	if !c.connected {
-		if err := c.Connect(); err != nil {
-			return NewReply(nil, err)
-		}
-	}
 
 	return c.do(cmd, args...)
 }
@@ -238,6 +224,10 @@ func (c *Client) ExecTrans() ([]*Reply, error) {
 }
 
 func (c *Client) log(cmd string, args ...interface{}) {
+	if c.logger == nil {
+		return
+	}
+
 	if len(cmd) == 0 {
 		return
 	}

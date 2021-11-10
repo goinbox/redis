@@ -9,8 +9,6 @@ type PConfig struct {
 	pool.Config
 
 	NewClientFunc func() (*Client, error)
-
-	LogKeepAlive bool
 }
 
 type Pool struct {
@@ -52,6 +50,8 @@ func (p *Pool) Get(logger golog.Logger) (*Client, error) {
 
 func (p *Pool) Put(client *Client) error {
 	if client.Connected() {
+		client.SetLogger(nil)
+
 		return p.pl.Put(client)
 	}
 
@@ -65,9 +65,5 @@ func (p *Pool) newConn() (pool.IConn, error) {
 func (p *Pool) keepAlive(conn pool.IConn) error {
 	client := conn.(*Client)
 
-	if p.config.LogKeepAlive == true {
-		return client.Do("ping").Err
-	}
-
-	return client.DoWithoutLog("ping").Err
+	return client.Do("ping").Err
 }
