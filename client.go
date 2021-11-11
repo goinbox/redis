@@ -1,34 +1,56 @@
 package redis
 
 import (
-	"fmt"
-	"io"
+	"context"
+	"errors"
 
-	"github.com/garyburd/redigo/redis"
+	"github.com/go-redis/redis/v8"
 
 	"github.com/goinbox/golog"
 )
 
-type cmdArgs struct {
-	cmd  string
-	args []interface{}
+type dbItem struct {
+	config *Config
+	db     *redis.Client
+}
+
+var dbPool = map[string]*dbItem{}
+
+func RegisterDB(key string, config *Config) {
+	db := redis.NewClient(config.Options)
+
+	dbPool[key] = &dbItem{
+		config: config,
+		db:     db,
+	}
 }
 
 type Client struct {
+	db  *redis.Client
+	ctx context.Context
+
 	config *Config
 	logger golog.Logger
+}
 
-	conn      redis.Conn
-	connected bool
+func NewClientFromPool(key string, logger golog.Logger) (*Client, error) {
+	item, ok := dbPool[key]
+	if !ok {
+		return nil, errors.New("DB " + key + " not exist")
+	}
 
-	pipeCmds []*cmdArgs
+	return newClient(item.db, item.config, logger), nil
 }
 
 func NewClient(config *Config, logger golog.Logger) *Client {
-	c := &Client{
-		config: config,
+	return newClient(redis.NewClient(config.Options), config, logger)
+}
 
-		pipeCmds: []*cmdArgs{},
+func newClient(db *redis.Client, config *Config, logger golog.Logger) *Client {
+	c := &Client{
+		db:     db,
+		ctx:    context.Background(),
+		config: config,
 	}
 
 	if logger != nil {
@@ -52,203 +74,69 @@ func (c *Client) SetLogger(logger golog.Logger) *Client {
 	return c
 }
 
-func (c *Client) Connected() bool {
-	return c.connected
+func (c *Client) Do(args ...interface{}) *Reply {
+	cmd := redis.NewCmd(c.ctx, args...)
+
+	c.log(cmd)
+
+	err := c.db.Process(c.ctx, cmd)
+
+	return &Reply{
+		cmd: cmd,
+		Err: err,
+	}
 }
 
-func (c *Client) Free() {
-	if c.conn != nil {
-		_ = c.conn.Close()
+func (c *Client) Pipeline() *Pipeline {
+	if c.logger != nil {
+		c.logger.Info("start pipeline")
 	}
 
-	c.connected = false
+	return &Pipeline{
+		pipe: c.db.Pipeline(),
+		ctx:  c.ctx,
+
+		logger:         c.logger,
+		logFieldKeyCmd: c.config.LogFieldKeyCmd,
+	}
 }
 
-func (c *Client) Connect() error {
-	options := []redis.DialOption{
-		redis.DialConnectTimeout(c.config.ConnectTimeout),
-		redis.DialReadTimeout(c.config.ReadTimeout),
-		redis.DialWriteTimeout(c.config.WriteTimeout),
+func (c *Client) Transactions() *Transactions {
+	if c.logger != nil {
+		c.logger.Info("start trans")
 	}
 
-	conn, err := redis.Dial("tcp", c.config.Addr, options...)
-	if err != nil {
-		return err
+	return &Transactions{
+		tx:  c.db.TxPipeline(),
+		ctx: c.ctx,
+
+		logger:         c.logger,
+		logFieldKeyCmd: c.config.LogFieldKeyCmd,
 	}
-
-	_, err = conn.Do("auth", c.config.Pass)
-	if err != nil {
-		return err
-	}
-
-	c.conn = conn
-	c.connected = true
-
-	return nil
 }
 
-func (c *Client) Do(cmd string, args ...interface{}) *Reply {
-	if !c.connected {
-		if err := c.Connect(); err != nil {
-			return NewReply(nil, err)
-		}
+func (c *Client) RunScript(src string, keys []string, args ...interface{}) *Reply {
+	script := redis.NewScript(src)
+
+	if c.logger != nil {
+		c.logger.Info("run script")
 	}
 
-	c.log(cmd, args...)
+	cmd := script.Run(c.ctx, c.db, keys, args...)
 
-	return c.do(cmd, args...)
+	return &Reply{
+		cmd: cmd,
+		Err: nil,
+	}
 }
 
-func (c *Client) do(cmd string, args ...interface{}) *Reply {
-	defer func() {
-		c.pipeCmds = []*cmdArgs{}
-	}()
-
-	for _, ca := range c.pipeCmds {
-		if err := c.conn.Send(ca.cmd, ca.args...); err != nil {
-			return NewReply(nil, err)
-		}
-	}
-
-	reply, err := c.conn.Do(cmd, args...)
-	if err != nil {
-		if err != io.EOF {
-			return NewReply(nil, err)
-		}
-		if !c.config.TimeoutAutoReconnect {
-			return NewReply(nil, err)
-		}
-		err = c.reconnect()
-		if err != nil {
-			return NewReply(nil, err)
-		}
-
-		for _, ca := range c.pipeCmds {
-			if err = c.conn.Send(ca.cmd, ca.args...); err != nil {
-				return NewReply(nil, err)
-			}
-		}
-		reply, err = c.conn.Do(cmd, args...)
-		if err != nil {
-			return NewReply(nil, err)
-		}
-	}
-
-	return NewReply(reply, err)
-}
-
-func (c *Client) Send(cmd string, args ...interface{}) {
-	c.log(cmd, args...)
-	c.pipeCmds = append(c.pipeCmds, &cmdArgs{cmd, args})
-}
-
-func (c *Client) ExecPipelining() ([]*Reply, []int) {
-	if !c.connected {
-		if err := c.Connect(); err != nil {
-			return []*Reply{NewReply(nil, err)}, []int{0}
-		}
-	}
-
-	defer func() {
-		c.pipeCmds = []*cmdArgs{}
-	}()
-
-	for _, ca := range c.pipeCmds {
-		if err := c.conn.Send(ca.cmd, ca.args...); err != nil {
-			return []*Reply{NewReply(nil, err)}, []int{0}
-		}
-	}
-	if err := c.conn.Flush(); err != nil {
-		return []*Reply{NewReply(nil, err)}, []int{0}
-	}
-
-	reply, err := c.conn.Receive()
-	if err != nil {
-		if err != io.EOF {
-			return []*Reply{NewReply(nil, err)}, []int{0}
-		}
-		if !c.config.TimeoutAutoReconnect {
-			return []*Reply{NewReply(nil, err)}, []int{0}
-		}
-		err = c.reconnect()
-		if err != nil {
-			return []*Reply{NewReply(nil, err)}, []int{0}
-		}
-
-		for _, ca := range c.pipeCmds {
-			if err = c.conn.Send(ca.cmd, ca.args...); err != nil {
-				return []*Reply{NewReply(nil, err)}, []int{0}
-			}
-		}
-
-		if err = c.conn.Flush(); err != nil {
-			return []*Reply{NewReply(nil, err)}, []int{0}
-		}
-		reply, err = c.conn.Receive()
-		if err != nil {
-			return []*Reply{NewReply(nil, err)}, []int{0}
-		}
-	}
-
-	replies := make([]*Reply, len(c.pipeCmds))
-	var errIndexes []int
-
-	replies[0] = NewReply(reply, nil)
-	for i := 1; i < len(c.pipeCmds); i++ {
-		reply, err := c.conn.Receive()
-		replies[i] = NewReply(reply, err)
-		if err != nil {
-			errIndexes = append(errIndexes, i)
-		}
-	}
-
-	return replies, errIndexes
-}
-
-func (c *Client) BeginTrans() {
-	c.Send("multi")
-}
-
-func (c *Client) DiscardTrans() error {
-	return c.Do("discard").Err
-}
-
-func (c *Client) ExecTrans() ([]*Reply, error) {
-	reply := c.Do("exec")
-	values, err := redis.Values(reply.reply, reply.Err)
-	if err != nil {
-		return nil, err
-	}
-
-	replies := make([]*Reply, len(values))
-	for i, value := range values {
-		replies[i] = NewReply(value, nil)
-	}
-
-	return replies, nil
-}
-
-func (c *Client) log(cmd string, args ...interface{}) {
+func (c *Client) log(cmd redis.Cmder) {
 	if c.logger == nil {
 		return
 	}
 
-	if len(cmd) == 0 {
-		return
-	}
-
-	for _, arg := range args {
-		cmd += " " + fmt.Sprint(arg)
-	}
-
 	c.logger.Info("run cmd", &golog.Field{
 		Key:   c.config.LogFieldKeyCmd,
-		Value: cmd,
+		Value: cmd.String(),
 	})
-}
-
-func (c *Client) reconnect() error {
-	c.Free()
-
-	return c.Connect()
 }

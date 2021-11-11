@@ -1,32 +1,17 @@
 package redis
 
-import "github.com/garyburd/redigo/redis"
+import (
+	"github.com/go-redis/redis/v8"
+)
 
 type Reply struct {
-	reply interface{}
+	cmd *redis.Cmd
 
 	Err error
 }
 
-func NewReply(reply interface{}, err error) *Reply {
-	return &Reply{
-		reply: reply,
-
-		Err: err,
-	}
-}
-
-func (r *Reply) SimpleReplyIsNil() bool {
-	if r.reply == nil {
-		return true
-	}
-
-	return false
-}
-
-func (r *Reply) ArrReplyIsNil() bool {
-	v, _ := redis.Values(r.reply, nil)
-	if len(v) == 0 {
+func (r *Reply) Nil() bool {
+	if r.Err == redis.Nil {
 		return true
 	}
 
@@ -34,57 +19,61 @@ func (r *Reply) ArrReplyIsNil() bool {
 }
 
 func (r *Reply) Bool() (bool, error) {
-	return redis.Bool(r.reply, nil)
+	return r.cmd.Bool()
 }
 
-func (r *Reply) ByteSlices() ([][]byte, error) {
-	return redis.ByteSlices(r.reply, nil)
+func (r *Reply) BoolSlice() ([]bool, error) {
+	return r.cmd.BoolSlice()
 }
 
-func (r *Reply) Bytes() ([]byte, error) {
-	return redis.Bytes(r.reply, nil)
+func (r *Reply) Float32() (float32, error) {
+	return r.cmd.Float32()
+}
+
+func (r *Reply) Float32Slice() ([]float32, error) {
+	return r.cmd.Float32Slice()
 }
 
 func (r *Reply) Float64() (float64, error) {
-	return redis.Float64(r.reply, nil)
+	return r.cmd.Float64()
 }
 
-func (r *Reply) Int() (int, error) {
-	return redis.Int(r.reply, nil)
+func (r *Reply) Float64Slice() ([]float64, error) {
+	return r.cmd.Float64Slice()
 }
 
 func (r *Reply) Int64() (int64, error) {
-	return redis.Int64(r.reply, nil)
+	return r.cmd.Int64()
 }
 
-func (r *Reply) Int64Map() (map[string]int64, error) {
-	return redis.Int64Map(r.reply, nil)
-}
-
-func (r *Reply) Ints() ([]int, error) {
-	return redis.Ints(r.reply, nil)
-}
-
-func (r *Reply) Int64s() ([]int64, error) {
-	return redis.Int64s(r.reply, nil)
-}
-
-func (r *Reply) Struct(s interface{}) error {
-	return redis.ScanStruct(r.reply.([]interface{}), s)
+func (r *Reply) Int64Slice() ([]int64, error) {
+	return r.cmd.Int64Slice()
 }
 
 func (r *Reply) String() (string, error) {
-	return redis.String(r.reply, nil)
+	return r.cmd.Text()
 }
 
-func (r *Reply) StringMap() (map[string]string, error) {
-	return redis.StringMap(r.reply, nil)
-}
-
-func (r *Reply) Strings() ([]string, error) {
-	return redis.Strings(r.reply, nil)
+func (r *Reply) StringSlice() ([]string, error) {
+	return r.cmd.StringSlice()
 }
 
 func (r *Reply) Uint64() (uint64, error) {
-	return redis.Uint64(r.reply, nil)
+	return r.cmd.Uint64()
+}
+
+func (r *Reply) Uint64Slice() ([]uint64, error) {
+	return r.cmd.Uint64Slice()
+}
+
+func (r *Reply) Int() (int, error) {
+	return r.cmd.Int()
+}
+
+func (r *Reply) Slice() ([]interface{}, error) {
+	return r.cmd.Slice()
+}
+
+func (r *Reply) Value() interface{} {
+	return r.cmd.Val()
 }

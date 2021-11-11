@@ -3,6 +3,8 @@ package redis
 import (
 	"fmt"
 	"time"
+
+	"github.com/go-redis/redis/v8"
 )
 
 const (
@@ -15,14 +17,7 @@ const (
 )
 
 type Config struct {
-	Addr string
-	Pass string
-
-	ConnectTimeout time.Duration
-	ReadTimeout    time.Duration
-	WriteTimeout   time.Duration
-
-	TimeoutAutoReconnect bool
+	*redis.Options
 
 	LogFieldKeyAddr string
 	LogFieldKeyCmd  string
@@ -30,14 +25,14 @@ type Config struct {
 
 func NewConfig(host, pass string, port int) *Config {
 	return &Config{
-		Addr: fmt.Sprintf("%s:%d", host, port),
-		Pass: pass,
-
-		ConnectTimeout: DefaultConnectTimeout,
-		ReadTimeout:    DefaultReadTimeout,
-		WriteTimeout:   DefaultWriteTimeout,
-
-		TimeoutAutoReconnect: true,
+		Options: &redis.Options{
+			Addr:         fmt.Sprintf("%s:%d", host, port),
+			Password:     pass,
+			DB:           0,
+			DialTimeout:  DefaultConnectTimeout,
+			ReadTimeout:  DefaultReadTimeout,
+			WriteTimeout: DefaultWriteTimeout,
+		},
 
 		LogFieldKeyAddr: DefaultLogFieldKeyAddr,
 		LogFieldKeyCmd:  DefaultLogFieldKeyCmd,

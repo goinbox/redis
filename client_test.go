@@ -1,86 +1,72 @@
 package redis
 
 import (
-	"github.com/goinbox/golog"
-
+	"encoding/json"
 	"testing"
-	"time"
+
+	"github.com/goinbox/golog"
 )
 
-func TestClient(t *testing.T) {
+func TestClientDo(t *testing.T) {
 	client := getTestClient()
 
-	reply := client.Do("set", "c", "1")
-	t.Log(reply.String())
-	reply = client.Do("get", "c")
-	t.Log(reply.Int())
+	key := "test"
+	r := client.Do("get", key)
+	t.Log("key not exist", r.Nil())
 
-	client.Send("set", "a", "a")
-	client.Send("set", "b", "b")
-	client.Send("get", "a")
-	client.Send("get", "b")
-	replies, errIndexes := client.ExecPipelining()
-	t.Log(errIndexes)
-	for _, reply := range replies {
-		t.Log(reply.String())
-		t.Log(reply.Err)
-	}
+	r = client.Do("set", key, "test redis client")
+	t.Log("set", r.Err)
 
-	client.BeginTrans()
-	client.Send("set", "a", "1")
-	client.Send("set", "b", "2")
-	client.Send("get", "a")
-	client.Send("get", "b")
-	replies, _ = client.ExecTrans()
-	for _, reply := range replies {
-		t.Log(reply.String())
-		t.Log(reply.Err)
-	}
+	r = client.Do("get", key)
+	t.Log("get", r.Value())
 
-	time.Sleep(time.Second * 5)
-	reply = client.Do("get", "c")
-	t.Log(reply.Int())
-
-	client.Free()
+	client.Do("del", key)
 }
 
-func TestAutoReconnect(t *testing.T) {
+func TestJson(t *testing.T) {
+	type person struct {
+		Name string
+		Age  int
+	}
+
+	bs, _ := json.Marshal(&person{
+		Name: "zhangsan",
+		Age:  10,
+	})
+
 	client := getTestClient()
+	key := "test"
+	r := client.Do("set", key, bs)
+	t.Log("set", r.Err, bs)
 
-	reply := client.Do("set", "a", "1")
-	t.Log(reply.String())
-	time.Sleep(time.Second * 4) //set redis-server timeout = 3
-	reply = client.Do("get", "a")
-	t.Log(reply.Err)
+	r = client.Do("get", key)
+	t.Log(r.Value())
+	p := new(person)
+	s, _ := r.String()
+	err := json.Unmarshal([]byte(s), p)
+	t.Log("get", err, p)
+}
+
+func TestRunScript(t *testing.T) {
+	src := `
+local key = KEYS[1]
+local change = ARGV[1]
+
+local value = redis.call("GET", key)
+if not value then
+  value = 0
+end
+
+value = value + change
+redis.call("SET", key, value)
+
+return value
+`
+	keys := []string{"my_counter"}
+	values := []interface{}{+1}
+
+	reply := getTestClient().RunScript(src, keys, values...)
 	t.Log(reply.Int())
-
-	time.Sleep(time.Second * 4)
-
-	client.Send("set", "a", "a")
-	client.Send("set", "b", "b")
-	client.Send("get", "a")
-	client.Send("get", "b")
-	replies, errIndexes := client.ExecPipelining()
-	t.Log(errIndexes)
-	for _, reply := range replies {
-		t.Log(reply.String())
-		t.Log(reply.Err)
-	}
-
-	time.Sleep(time.Second * 4)
-
-	client.BeginTrans()
-	client.Send("set", "a", "1")
-	client.Send("set", "b", "2")
-	client.Send("get", "a")
-	client.Send("get", "b")
-	replies, _ = client.ExecTrans()
-	for _, reply := range replies {
-		t.Log(reply.String())
-		t.Log(reply.Err)
-	}
-
-	client.Free()
 }
 
 func getTestClient() *Client {
@@ -88,7 +74,6 @@ func getTestClient() *Client {
 	logger := golog.NewSimpleLogger(w, golog.NewSimpleFormater())
 
 	config := NewConfig("127.0.0.1", "123", 6379)
-	config.ConnectTimeout = time.Second * 3
 
 	return NewClient(config, logger)
 }
