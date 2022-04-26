@@ -77,3 +77,19 @@ func getTestClient() *Client {
 
 	return NewClient(config, logger)
 }
+
+func TestClose(t *testing.T) {
+	RegisterDB("t1", NewConfig("127.0.0.1", "123", 6379))
+	RegisterDB("t2", NewConfig("127.0.0.1", "123", 6379))
+	c1, _ := NewClientFromPool("t1", &golog.NoopLogger{})
+	c2, _ := NewClientFromPool("t2", &golog.NoopLogger{})
+
+	err := c1.Do("get", "a").Err
+	t.Log(err)
+	err = c2.Do("get", "a").Err
+	t.Log(err)
+
+	_ = c1.Close()
+	err = c2.Do("get", "a").Err
+	t.Log(err)
+}

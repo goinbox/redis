@@ -130,6 +130,10 @@ func (c *Client) RunScript(src string, keys []string, args ...interface{}) *Repl
 	}
 }
 
+func (c *Client) Close() error {
+	return c.db.Close()
+}
+
 func (c *Client) log(cmd redis.Cmder) {
 	if c.logger == nil {
 		return
