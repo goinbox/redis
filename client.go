@@ -119,7 +119,20 @@ func (c *Client) RunScript(src string, keys []string, args ...interface{}) *Repl
 	script := redis.NewScript(src)
 
 	if c.logger != nil {
-		c.logger.Info("run script")
+		c.logger.Info("run script", []*golog.Field{
+			{
+				Key:   "src",
+				Value: []byte(src),
+			},
+			{
+				Key:   "keys",
+				Value: keys,
+			},
+			{
+				Key:   "args",
+				Value: args,
+			},
+		}...)
 	}
 
 	cmd := script.Run(c.ctx, c.db, keys, args...)
