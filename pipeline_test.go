@@ -5,13 +5,13 @@ import (
 )
 
 func TestPipeline(t *testing.T) {
-	pipe := getTestClient().Pipeline()
+	pipe := client.Pipeline(ctx)
 	key := "pipeline"
 
-	pipe.Do("set", key, "test pipeline")
-	pipe.Do("get", key)
+	pipe.Do(ctx, "set", key, "test pipeline")
+	pipe.Do(ctx, "get", key)
 
-	replies, err := pipe.Exec()
+	replies, err := pipe.Exec(ctx)
 	t.Log(err)
 	for _, reply := range replies {
 		t.Log(reply.Value())

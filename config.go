@@ -12,8 +12,7 @@ const (
 	DefaultReadTimeout    = 10 * time.Second
 	DefaultWriteTimeout   = 10 * time.Second
 
-	DefaultLogFieldKeyAddr = "redis"
-	DefaultLogFieldKeyCmd  = "cmd"
+	DefaultLogFieldKeyCmd = "cmd"
 )
 
 type Config struct {
@@ -34,7 +33,6 @@ func NewConfig(host, pass string, port int) *Config {
 			WriteTimeout: DefaultWriteTimeout,
 		},
 
-		LogFieldKeyAddr: DefaultLogFieldKeyAddr,
-		LogFieldKeyCmd:  DefaultLogFieldKeyCmd,
+		LogFieldKeyCmd: DefaultLogFieldKeyCmd,
 	}
 }
