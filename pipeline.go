@@ -1,10 +1,9 @@
 package redis
 
 import (
-	"github.com/go-redis/redis/v8"
-	"github.com/goinbox/pcontext"
-
 	"github.com/goinbox/golog"
+	"github.com/goinbox/pcontext"
+	"github.com/redis/go-redis/v9"
 )
 
 type Pipeline struct {
@@ -43,13 +42,13 @@ func (p *Pipeline) Exec(ctx pcontext.Context) ([]*Reply, error) {
 	return result, nil
 }
 
-func (p *Pipeline) Discard(ctx pcontext.Context) error {
+func (p *Pipeline) Discard(ctx pcontext.Context) {
 	logger := ctx.Logger()
 	if logger != nil {
 		logger.Info("discard pipeline")
 	}
 
-	return p.pipe.Discard()
+	p.pipe.Discard()
 }
 
 func (p *Pipeline) log(logger golog.Logger, cmd redis.Cmder) {

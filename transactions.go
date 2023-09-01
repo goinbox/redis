@@ -1,10 +1,9 @@
 package redis
 
 import (
-	"github.com/go-redis/redis/v8"
-	"github.com/goinbox/pcontext"
-
 	"github.com/goinbox/golog"
+	"github.com/goinbox/pcontext"
+	"github.com/redis/go-redis/v9"
 )
 
 type Transactions struct {
@@ -43,13 +42,13 @@ func (t *Transactions) Exec(ctx pcontext.Context) ([]*Reply, error) {
 	return result, nil
 }
 
-func (t *Transactions) Discard(ctx pcontext.Context) error {
+func (t *Transactions) Discard(ctx pcontext.Context) {
 	logger := ctx.Logger()
 	if logger != nil {
 		logger.Info("discard trans")
 	}
 
-	return t.tx.Discard()
+	t.tx.Discard()
 }
 
 func (t *Transactions) log(logger golog.Logger, cmd redis.Cmder) {

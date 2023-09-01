@@ -3,10 +3,9 @@ package redis
 import (
 	"errors"
 
-	"github.com/go-redis/redis/v8"
-	"github.com/goinbox/pcontext"
-
 	"github.com/goinbox/golog"
+	"github.com/goinbox/pcontext"
+	"github.com/redis/go-redis/v9"
 )
 
 type dbItem struct {
