@@ -64,10 +64,7 @@ func (c *Client) Do(ctx pcontext.Context, args ...interface{}) *Reply {
 }
 
 func (c *Client) Pipeline(ctx pcontext.Context) *Pipeline {
-	logger := ctx.Logger()
-	if logger != nil {
-		logger.Info("start pipeline")
-	}
+	ctx.Logger().Info("start pipeline")
 
 	return &Pipeline{
 		pipe: c.db.Pipeline(),
@@ -77,10 +74,7 @@ func (c *Client) Pipeline(ctx pcontext.Context) *Pipeline {
 }
 
 func (c *Client) Transactions(ctx pcontext.Context) *Transactions {
-	logger := ctx.Logger()
-	if logger != nil {
-		logger.Info("start trans")
-	}
+	ctx.Logger().Info("start trans")
 
 	return &Transactions{
 		tx: c.db.TxPipeline(),
@@ -92,23 +86,20 @@ func (c *Client) Transactions(ctx pcontext.Context) *Transactions {
 func (c *Client) RunScript(ctx pcontext.Context, src string, keys []string, args ...interface{}) *Reply {
 	script := redis.NewScript(src)
 
-	logger := ctx.Logger()
-	if logger != nil {
-		logger.Info("run script", []*golog.Field{
-			{
-				Key:   "src",
-				Value: []byte(src),
-			},
-			{
-				Key:   "keys",
-				Value: keys,
-			},
-			{
-				Key:   "args",
-				Value: args,
-			},
-		}...)
-	}
+	ctx.Logger().Info("run script", []*golog.Field{
+		{
+			Key:   "src",
+			Value: []byte(src),
+		},
+		{
+			Key:   "keys",
+			Value: keys,
+		},
+		{
+			Key:   "args",
+			Value: args,
+		},
+	}...)
 
 	cmd := script.Run(ctx, c.db, keys, args...)
 
@@ -119,19 +110,12 @@ func (c *Client) RunScript(ctx pcontext.Context, src string, keys []string, args
 }
 
 func (c *Client) Close(ctx pcontext.Context) error {
-	logger := ctx.Logger()
-	if logger != nil {
-		logger.Info("close db")
-	}
+	ctx.Logger().Info("close db")
 
 	return c.db.Close()
 }
 
 func (c *Client) log(logger golog.Logger, cmd redis.Cmder) {
-	if logger == nil {
-		return
-	}
-
 	logger.Info("run cmd", &golog.Field{
 		Key:   c.config.LogFieldKeyCmd,
 		Value: cmd.String(),

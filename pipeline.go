@@ -21,10 +21,7 @@ func (p *Pipeline) Do(ctx pcontext.Context, args ...interface{}) {
 }
 
 func (p *Pipeline) Exec(ctx pcontext.Context) ([]*Reply, error) {
-	logger := ctx.Logger()
-	if logger != nil {
-		logger.Info("exec pipeline")
-	}
+	ctx.Logger().Info("exec pipeline")
 
 	cmds, err := p.pipe.Exec(ctx)
 	if err != nil {
@@ -43,10 +40,7 @@ func (p *Pipeline) Exec(ctx pcontext.Context) ([]*Reply, error) {
 }
 
 func (p *Pipeline) Discard(ctx pcontext.Context) {
-	logger := ctx.Logger()
-	if logger != nil {
-		logger.Info("discard pipeline")
-	}
+	ctx.Logger().Info("discard pipeline")
 
 	p.pipe.Discard()
 }

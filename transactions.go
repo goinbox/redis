@@ -21,10 +21,7 @@ func (t *Transactions) Do(ctx pcontext.Context, args ...interface{}) {
 }
 
 func (t *Transactions) Exec(ctx pcontext.Context) ([]*Reply, error) {
-	logger := ctx.Logger()
-	if logger != nil {
-		logger.Info("exec trans")
-	}
+	ctx.Logger().Info("exec trans")
 
 	cmds, err := t.tx.Exec(ctx)
 	if err != nil {
@@ -43,19 +40,12 @@ func (t *Transactions) Exec(ctx pcontext.Context) ([]*Reply, error) {
 }
 
 func (t *Transactions) Discard(ctx pcontext.Context) {
-	logger := ctx.Logger()
-	if logger != nil {
-		logger.Info("discard trans")
-	}
+	ctx.Logger().Info("discard trans")
 
 	t.tx.Discard()
 }
 
 func (t *Transactions) log(logger golog.Logger, cmd redis.Cmder) {
-	if logger == nil {
-		return
-	}
-
 	logger.Info("trans cmd", &golog.Field{
 		Key:   t.logFieldKeyCmd,
 		Value: cmd.String(),
