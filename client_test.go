@@ -14,7 +14,7 @@ var client *Client
 func init() {
 	w, _ := golog.NewFileWriter("/dev/stdout", 0)
 	logger := golog.NewSimpleLogger(w, golog.NewSimpleFormater())
-	ctx = pcontext.NewSimpleContext(logger, nil)
+	ctx = pcontext.NewSimpleContext(nil, logger)
 
 	config := NewConfig("127.0.0.1", "123", 6379)
 	client = NewClient(config)
